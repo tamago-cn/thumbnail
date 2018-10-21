@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/nfnt/resize"
+	"golang.org/x/image/bmp"
 )
 
 func resizeJPEG(srcPath string, dstDir string) error {
@@ -75,6 +76,37 @@ func resizePNG(srcPath string, dstDir string) error {
 	return nil
 }
 
+func resizeBMP(srcPath string, dstDir string) error {
+	fp, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+	filename := filepath.Base(srcPath)
+	img, err := bmp.Decode(fp)
+	//r := resize.Resize(128, 128, img, resize.Lanczos3)
+	r := resize.Thumbnail(128, 128, img, resize.Lanczos3)
+	dstPath := filepath.Join(dstDir, filename)
+	out, err := os.Create(dstPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(dstDir, 0666)
+			if err != nil {
+				return err
+			}
+			out, err = os.Create(dstPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	defer out.Close()
+	bmp.Encode(out, r)
+	return nil
+}
+
 // ResizePic 生成缩略图
 func ResizePic(srcPath string, dstDir string) error {
 	ext := path.Ext(srcPath)
@@ -83,6 +115,10 @@ func ResizePic(srcPath string, dstDir string) error {
 		return resizeJPEG(srcPath, dstDir)
 	case ".png":
 		return resizePNG(srcPath, dstDir)
+	case ".bmp":
+		return resizeBMP(srcPath, dstDir)
+	default:
+		return fmt.Errorf("unsupport ext: %s", ext)
 	}
 	return nil
 }
