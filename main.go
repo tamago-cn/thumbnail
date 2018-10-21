@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"os"
@@ -107,6 +108,47 @@ func resizeBMP(srcPath string, dstDir string) error {
 	return nil
 }
 
+func resizeGIF(srcPath string, dstDir string) error {
+	fp, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+	filename := filepath.Base(srcPath)
+	img, err := gif.Decode(fp)
+	//r := resize.Resize(128, 128, img, resize.Lanczos3)
+	r := resize.Thumbnail(128, 128, img, resize.Lanczos3)
+	dstPath := filepath.Join(dstDir, filename)
+	out, err := os.Create(dstPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(dstDir, 0666)
+			if err != nil {
+				return err
+			}
+			out, err = os.Create(dstPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	defer out.Close()
+	gif.Encode(out, r, nil)
+	return nil
+}
+
+func resizeSVG(srcPath string, dstDir string) error {
+	//w := 500
+	//h := 500
+	//c := svg.New(os.Stdout)
+	//c.Start(w, h)
+	//c.Circle(w/2, h/2, 100)
+	//c.End()
+	return nil
+}
+
 // ResizePic 生成缩略图
 func ResizePic(srcPath string, dstDir string) error {
 	ext := path.Ext(srcPath)
@@ -117,10 +159,13 @@ func ResizePic(srcPath string, dstDir string) error {
 		return resizePNG(srcPath, dstDir)
 	case ".bmp":
 		return resizeBMP(srcPath, dstDir)
+	case ".gif":
+		return resizeGIF(srcPath, dstDir)
+	case ".svg":
+		return resizeSVG(srcPath, dstDir)
 	default:
 		return fmt.Errorf("unsupport ext: %s", ext)
 	}
-	return nil
 }
 
 var (
